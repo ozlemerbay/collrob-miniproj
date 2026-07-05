@@ -5,7 +5,7 @@ ENV_HEIGHT = 100.0
 
 
 class FoodSite:
-    # holds the parameters for a specific resource area
+    # this is a specific resource area
     def __init__(self, x, y, alpha, rho, gamma):
         self.x = x
         self.y = y

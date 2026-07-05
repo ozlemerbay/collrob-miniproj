@@ -11,7 +11,7 @@ class SwarmAnt:
         self.world = world
         self.x = start_x
         self.y = start_y
-        self.current_idea = None  # None means the ant is completely undecided
+        self.current_idea = None  # None means the ant is undecided
 
         self.speed = ANT_SPEED
         self.sense_range = SENSE_RAD
@@ -27,22 +27,22 @@ class SwarmAnt:
         self.x, self.y = self.world.keep_in_bounds(next_x, next_y)
 
     def maybe_forget(self):
-        # check if we drop our current opinion based on gamma
+        # check if ant drops current opinion based on gamma
         if self.current_idea is not None:
             if random.random() < self.current_idea.gamma:
                 self.current_idea = None  # go back to undecided
 
     def try_discover(self):
-        # only look for food if we don't have an idea already
+        # only look for food if ant doesn't have an idea
         if self.current_idea is None:
             nearby_food = self.world.find_nearest_food(self.x, self.y, self.sense_range)
             if nearby_food is not None:
-                # check if we actually detect it
+                # check if ant  actually detect it
                 if random.random() < nearby_food.alpha:
                     self.current_idea = nearby_food
 
     def chat_with_neighbors(self):
-        # see who is around us
+        # see who is around the ant
         nearby_ants = self.world.get_buddies(self, self.talk_range)
         if len(nearby_ants) == 0:
             return  # nobody is here

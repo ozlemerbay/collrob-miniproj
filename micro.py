@@ -121,7 +121,7 @@ def main_experiment_loop():
         print(f"\n--- Swarm Size {ant_count} ---")
         print(f"Average Time: {time_text} | Accuracy: {win_rate}%\n")
 
-    # generate the png files for LaTeX
+    # generate the png files for report
     time_x = range(MAX_STEPS)
 
     for ant_count in TEST_COUNTS:

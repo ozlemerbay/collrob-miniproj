@@ -2,7 +2,6 @@ import numpy as np
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 
-# setup values from my report experimental setup
 # resource A (High Quality)
 A_DISCOVER = 0.1
 A_ADOPT = 0.6
@@ -31,7 +30,7 @@ def ode_math_model(
 
 
 def solve_and_plot_ode(max_time):
-    start_vals = [0.0, 0.0]  # nobody has an opinion at t=0
+    start_vals = [0.0, 0.0]  # no ant has an opinion at t=0
 
     # create 1000 smooth points for the chart
     time_points = np.linspace(0, max_time, 1000)
@@ -44,12 +43,11 @@ def solve_and_plot_ode(max_time):
         args=(A_DISCOVER, A_ADOPT, A_FORGET, B_DISCOVER, B_ADOPT, B_FORGET),
     )
 
-    # slice out the columns
     history_a = results[:, 0]
     history_b = results[:, 1]
     history_u = 1.0 - history_a - history_b
 
-    # draw the plot
+    # draw the plot for report
     plt.figure(figsize=(10, 6))
     plt.plot(time_points, history_a, label="Resource A", color="blue")
     plt.plot(time_points, history_b, label="Resource B", color="red")
@@ -61,8 +59,6 @@ def solve_and_plot_ode(max_time):
     plt.legend()
     plt.grid(True)
     plt.ylim(-0.05, 1.05)
-
-    # save it so I can put it in the latex report
     plt.savefig("macro_results.png")
 
 
