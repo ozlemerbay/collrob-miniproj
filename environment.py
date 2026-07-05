@@ -4,53 +4,57 @@ ENV_WIDTH = 100.0
 ENV_HEIGHT = 100.0
 
 
-class Resource:
+class FoodSite:
+    # holds the parameters for a specific resource area
     def __init__(self, x, y, alpha, rho, gamma):
         self.x = x
         self.y = y
-        self.alpha = alpha
-        self.rho = rho
-        self.gamma = gamma
+        self.alpha = alpha  # discovery
+        self.rho = rho  # adoption
+        self.gamma = gamma  # forgetting
 
 
-class Environment:
+class GridWorld:
+    # 2d empty box where the ants walk around
     def __init__(self, width=ENV_WIDTH, height=ENV_HEIGHT):
         self.width = width
         self.height = height
-        self.resources = []
-        self.agents = []
+        self.food_sites = []
+        self.ants = []
 
-    def add_resource(self, resource):
-        self.resources.append(resource)
+    def put_food(self, site):
+        self.food_sites.append(site)
 
-    def add_agent(self, agent):
-        self.agents.append(agent)
+    def put_ant(self, ant):
+        self.ants.append(ant)
 
-    def get_resource(self, x, y, sensing_radius):
-        """get the closes resource"""
-        closest_res = None
-        min_dist = float("inf")
-        for res in self.resources:
-            dist = math.hypot(res.x - x, res.y - y)
-            if dist <= sensing_radius and dist < min_dist:
-                closest_res = res
-                min_dist = dist
-        return closest_res
+    def find_nearest_food(self, x, y, radius):
+        # find the closest food source to the ant
+        best_site = None
+        shortest = float("inf")
+        for site in self.food_sites:
+            distance = math.hypot(site.x - x, site.y - y)
+            if distance <= radius and distance < shortest:
+                best_site = site
+                shortest = distance
+        return best_site
 
-    def get_neighbors(self, agent, communication_radius):
-        """get list of neighbors"""
-        neighbors = []
-        for curr_agent in self.agents:
-            if curr_agent is agent:
-                continue
+    def get_buddies(self, current_ant, comm_dist):
+        # find all other ants inside the talking circle
+        buddies = []
+        for other_ant in self.ants:
+            if other_ant is current_ant:
+                continue  # dont talk to yourself
 
-            dist = math.hypot(curr_agent.x - agent.x, curr_agent.y - agent.y)
-            if dist <= communication_radius:
-                neighbors.append(curr_agent)
-        return neighbors
+            distance = math.hypot(
+                other_ant.x - current_ant.x, other_ant.y - current_ant.y
+            )
+            if distance <= comm_dist:
+                buddies.append(other_ant)
+        return buddies
 
-    def limit_position(self, x, y):
-        """keep position within bounds"""
-        limited_x = max(0.0, min(x, self.width))
-        limited_y = max(0.0, min(y, self.height))
-        return limited_x, limited_y
+    def keep_in_bounds(self, x, y):
+        # stops ants from walking off the edge of the world
+        safe_x = max(0.0, min(x, self.width))
+        safe_y = max(0.0, min(y, self.height))
+        return safe_x, safe_y

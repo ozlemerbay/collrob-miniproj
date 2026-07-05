@@ -1,149 +1,148 @@
 import random
 import matplotlib.pyplot as plt
-from environment import Environment, Resource, ENV_WIDTH, ENV_HEIGHT
-from agent import Agent
+from environment import GridWorld, FoodSite, ENV_WIDTH, ENV_HEIGHT
+from agent import SwarmAnt
 
-# resource A
-RES_A_X, RES_A_Y = 25.0, 25.0
-RES_A_ALPHA = 0.1  # detection rate
-RES_A_RHO = 0.6  # adoption probability
-RES_A_GAMMA = 0.01  # abandonment rate
+# resource A (Good)
+A_POS_X, A_POS_Y = 25.0, 25.0
+A_ALPHA = 0.1  # detection rate
+A_RHO = 0.6  # adoption probability
+A_GAMMA = 0.01  # abandonment rate
 
-# resource B
-RES_B_X, RES_B_Y = 75.0, 75.0
-RES_B_ALPHA = 0.1
-RES_B_RHO = 0.3
-RES_B_GAMMA = 0.05
+# resource B (Bad)
+B_POS_X, B_POS_Y = 75.0, 75.0
+B_ALPHA = 0.1
+B_RHO = 0.3
+B_GAMMA = 0.05
 
-# simulation
-SWARM_SIZES = [20, 50, 100, 200]
-NUM_RUNS_PER_SIZE = 10
-SIMULATION_STEPS = 1500
-CONSENSUS_THRESHOLD = 0.80
-
-
-def run_simulation(swarm_size, steps):
-    env = Environment()
-
-    res_A = Resource(
-        x=RES_A_X,
-        y=RES_A_Y,
-        alpha=RES_A_ALPHA,
-        rho=RES_A_RHO,
-        gamma=RES_A_GAMMA,
-    )
-    res_B = Resource(
-        x=RES_B_X,
-        y=RES_B_Y,
-        alpha=RES_B_ALPHA,
-        rho=RES_B_RHO,
-        gamma=RES_B_GAMMA,
-    )
-
-    env.add_resource(res_A)
-    env.add_resource(res_B)
-
-    # initialize agents with random positions
-    agents = []
-    for _ in range(swarm_size):
-        x = random.uniform(0, ENV_WIDTH)
-        y = random.uniform(0, ENV_HEIGHT)
-        agent = Agent(env, x, y)
-        env.add_agent(agent)
-        agents.append(agent)
-
-    history = {"A": [], "B": [], "U": []}
-
-    for step in range(steps):
-        for agent in agents:
-            agent.step()
-
-        count_A = 0
-        count_B = 0
-        count_U = 0
-        for agent in agents:
-            if agent.preferred_resource is None:
-                count_U += 1
-            elif agent.preferred_resource is res_A:
-                count_A += 1
-            elif agent.preferred_resource is res_B:
-                count_B += 1
-
-        history["A"].append(count_A / swarm_size)
-        history["B"].append(count_B / swarm_size)
-        history["U"].append(count_U / swarm_size)
-
-        if step % 100 == 0:
-            pct_A = int(history["A"][-1] * 100)
-            pct_B = int(history["B"][-1] * 100)
-            pct_U = int(history["U"][-1] * 100)
-            print(f"Step {step} | A: {pct_A}% | B: {pct_B}% | U: {pct_U}%")
-
-    return history
+# test configuration
+TEST_COUNTS = [20, 50, 100, 200]
+REPETITIONS = 10
+MAX_STEPS = 1500
+AGREE_LIMIT = 0.80  # 80% consensus
 
 
-def run_experiments():
-    sample_histories = {}
-    for swarm_size in SWARM_SIZES:
-        consensus_steps = []
-        correct_decisions = 0
+def do_swarm_sim(num_ants, total_steps):
+    world = GridWorld()
 
-        for run_idx in range(NUM_RUNS_PER_SIZE):
-            random.seed(42 + run_idx)
-            history = run_simulation(swarm_size, SIMULATION_STEPS)
+    # spawn the food
+    good_food = FoodSite(A_POS_X, A_POS_Y, A_ALPHA, A_RHO, A_GAMMA)
+    bad_food = FoodSite(B_POS_X, B_POS_Y, B_ALPHA, B_RHO, B_GAMMA)
 
-            if run_idx == 0:
-                sample_histories[swarm_size] = history
+    world.put_food(good_food)
+    world.put_food(bad_food)
 
-            final_A = history["A"][-1]
-            final_B = history["B"][-1]
+    # scatter the ants randomly around the box
+    bug_list = []
+    for _ in range(num_ants):
+        spawn_x = random.uniform(0, ENV_WIDTH)
+        spawn_y = random.uniform(0, ENV_HEIGHT)
+        new_ant = SwarmAnt(world, spawn_x, spawn_y)
+        world.put_ant(new_ant)
+        bug_list.append(new_ant)
 
-            if final_A > final_B and final_A > 0.5:
-                correct_decisions += 1
+    # tracking lists for the plot
+    tracker = {"A": [], "B": [], "U": []}
 
-            # check when swarm reaches consensus
-            steps_to_consensus = -1
-            for step, ratio_A in enumerate(history["A"]):
-                if ratio_A >= CONSENSUS_THRESHOLD:
-                    steps_to_consensus = step
+    for step_num in range(total_steps):
+        # everybody moves and talks
+        for bug in bug_list:
+            bug.tick()
+
+        # count up what everyone is thinking right now
+        c_a = 0
+        c_b = 0
+        c_u = 0
+        for bug in bug_list:
+            if bug.current_idea is None:
+                c_u += 1
+            elif bug.current_idea is good_food:
+                c_a += 1
+            elif bug.current_idea is bad_food:
+                c_b += 1
+
+        # save the fractions
+        tracker["A"].append(c_a / num_ants)
+        tracker["B"].append(c_b / num_ants)
+        tracker["U"].append(c_u / num_ants)
+
+        # print so I can see the process
+        if step_num % 100 == 0:
+            print(
+                f"Step {step_num} -> A: {int((c_a / num_ants) * 100)}% | B: {int((c_b / num_ants) * 100)}%"
+            )
+
+    return tracker
+
+
+def main_experiment_loop():
+    saved_graphs = {}
+
+    for ant_count in TEST_COUNTS:
+        steps_taken_list = []
+        wins = 0
+
+        for run_id in range(REPETITIONS):
+            # lock the seed so the plots look the same every time I run it
+            random.seed(42 + run_id)
+
+            run_data = do_swarm_sim(ant_count, MAX_STEPS)
+
+            # just save the first run of the 10 for the plot images
+            if run_id == 0:
+                saved_graphs[ant_count] = run_data
+
+            end_a = run_data["A"][-1]
+            end_b = run_data["B"][-1]
+
+            # did they pick the right one?
+            if end_a > end_b and end_a > 0.5:
+                wins += 1
+
+            # calculate how fast they reached the threshold
+            finished_at = -1
+            for idx, a_ratio in enumerate(run_data["A"]):
+                if a_ratio >= AGREE_LIMIT:
+                    finished_at = idx
                     break
 
-            if steps_to_consensus != -1:
-                consensus_steps.append(steps_to_consensus)
+            if finished_at != -1:
+                steps_taken_list.append(finished_at)
 
-        accuracy = (correct_decisions / NUM_RUNS_PER_SIZE) * 100.0
+        # calculate the averages for the report table
+        win_rate = (wins / REPETITIONS) * 100.0
 
-        if consensus_steps:
-            avg_steps = sum(consensus_steps) / len(consensus_steps)
-            step_str = f"{avg_steps:.1f} steps"
+        if steps_taken_list:
+            average_time = sum(steps_taken_list) / len(steps_taken_list)
+            time_text = f"{average_time:.1f} steps"
         else:
-            step_str = "> max steps"
+            time_text = "> max steps"
 
-        print(
-            f"Swarm Size: {swarm_size} | Avg Steps: {step_str} | Accuracy: {accuracy}%"
-        )
+        print(f"\n--- Swarm Size {ant_count} ---")
+        print(f"Average Time: {time_text} | Accuracy: {win_rate}%\n")
 
-    # plots
-    t = range(SIMULATION_STEPS)
+    # generate the png files for LaTeX
+    time_x = range(MAX_STEPS)
 
-    for swarm_size in SWARM_SIZES:
-        hist = sample_histories[swarm_size]
+    for ant_count in TEST_COUNTS:
+        data = saved_graphs[ant_count]
 
         plt.figure(figsize=(10, 6))
-        plt.plot(t, hist["A"], label="Resource A", color="blue")
-        plt.plot(t, hist["B"], label="Resource B", color="red")
-        plt.plot(t, hist["U"], label="Undecided", color="gray")
+        plt.plot(time_x, data["A"], label="Resource A", color="blue")
+        plt.plot(time_x, data["B"], label="Resource B", color="red")
+        plt.plot(time_x, data["U"], label="Undecided", color="gray")
 
-        plt.title(f"Swarm Size: {swarm_size}")
-        plt.xlabel("Time")
-        plt.ylabel("Percentage")
+        plt.title(f"Microscopic Results (Size: {ant_count} agents)")
+        plt.xlabel("Simulation Steps")
+        plt.ylabel("Swarm Percentage")
         plt.ylim(-0.05, 1.05)
         plt.grid(True)
         plt.legend()
 
-        plt.savefig(f"micro_results_{swarm_size}.png")
+        file_name = f"micro_results_{ant_count}.png"
+        plt.savefig(file_name)
         plt.close()
 
 
 if __name__ == "__main__":
-    run_experiments()
+    main_experiment_loop()

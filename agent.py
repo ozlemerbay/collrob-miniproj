@@ -1,53 +1,63 @@
 import random
 import math
 
-AGENT_SPEED = 1.0
-AGENT_SENSING_RADIUS = 2.0
-AGENT_COMM_RADIUS = 5.0
+ANT_SPEED = 1.0
+SENSE_RAD = 2.0
+TALK_RAD = 5.0
 
 
-class Agent:
-    def __init__(self, env, x, y):
-        self.env = env
-        self.x = x
-        self.y = y
-        self.preferred_resource = None  # none means undecided
+class SwarmAnt:
+    def __init__(self, world, start_x, start_y):
+        self.world = world
+        self.x = start_x
+        self.y = start_y
+        self.current_idea = None  # None means the ant is completely undecided
 
-        self.speed = AGENT_SPEED
-        self.sensing_radius = AGENT_SENSING_RADIUS
-        self.communication_radius = AGENT_COMM_RADIUS
+        self.speed = ANT_SPEED
+        self.sense_range = SENSE_RAD
+        self.talk_range = TALK_RAD
 
-    def move(self):
-        angle = random.uniform(0, 2 * math.pi)
-        new_x = self.x + math.cos(angle) * self.speed
-        new_y = self.y + math.sin(angle) * self.speed
+    def do_random_walk(self):
+        # just pick a random angle and step forward
+        random_angle = random.uniform(0, 2 * math.pi)
+        next_x = self.x + math.cos(random_angle) * self.speed
+        next_y = self.y + math.sin(random_angle) * self.speed
 
-        self.x, self.y = self.env.limit_position(new_x, new_y)
+        # apply the walls
+        self.x, self.y = self.world.keep_in_bounds(next_x, next_y)
 
-    def abandon_opinion(self):
-        if self.preferred_resource is not None:
-            if random.random() < self.preferred_resource.gamma:
-                self.preferred_resource = None
+    def maybe_forget(self):
+        # check if we drop our current opinion based on gamma
+        if self.current_idea is not None:
+            if random.random() < self.current_idea.gamma:
+                self.current_idea = None  # go back to undecided
 
-    def discover_resource(self):
-        if self.preferred_resource is None:
-            found_resource = self.env.get_resource(self.x, self.y, self.sensing_radius)
-            if found_resource is not None:
-                if random.random() < found_resource.alpha:
-                    self.preferred_resource = found_resource
+    def try_discover(self):
+        # only look for food if we don't have an idea already
+        if self.current_idea is None:
+            nearby_food = self.world.find_nearest_food(self.x, self.y, self.sense_range)
+            if nearby_food is not None:
+                # check if we actually detect it
+                if random.random() < nearby_food.alpha:
+                    self.current_idea = nearby_food
 
-    def communicate_and_switch(self):
-        neighbors = self.env.get_neighbors(self, self.communication_radius)
-        if not neighbors:
-            return
+    def chat_with_neighbors(self):
+        # see who is around us
+        nearby_ants = self.world.get_buddies(self, self.talk_range)
+        if len(nearby_ants) == 0:
+            return  # nobody is here
 
-        neighbor = random.choice(neighbors)
-        if self.preferred_resource is None and neighbor.preferred_resource is not None:
-            if random.random() < neighbor.preferred_resource.rho:
-                self.preferred_resource = neighbor.preferred_resource
+        # pick one random ant to listen to (simulates tandem run abstraction)
+        speaker = random.choice(nearby_ants)
 
-    def step(self):
-        self.move()
-        self.discover_resource()
-        self.abandon_opinion()
-        self.communicate_and_switch()
+        # only copy them if we are undecided and they actually have an opinion
+        if self.current_idea is None and speaker.current_idea is not None:
+            if random.random() < speaker.current_idea.rho:
+                self.current_idea = speaker.current_idea
+
+    def tick(self):
+        # execute the biological loop
+        self.do_random_walk()
+        self.try_discover()
+        self.maybe_forget()
+        self.chat_with_neighbors()
