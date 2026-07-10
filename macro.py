@@ -2,12 +2,12 @@ import numpy as np
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 
-# resource A (High Quality)
+# resource A (good quality)
 A_DISCOVER = 0.1
 A_ADOPT = 0.6
 A_FORGET = 0.01
 
-# resource B (Low Quality)
+# resource B (bad quality)
 B_DISCOVER = 0.1
 B_ADOPT = 0.3
 B_FORGET = 0.05
@@ -18,7 +18,6 @@ TOTAL_TIME = 50
 def ode_math_model(
     fractions, time_t, a_disc, a_adopt, a_forget, b_disc, b_adopt, b_forget
 ):
-    # unpack the current values
     frac_a, frac_b = fractions
     frac_u = 1.0 - frac_a - frac_b  # the rest are undecided
 
@@ -31,11 +30,8 @@ def ode_math_model(
 
 def solve_and_plot_ode(max_time):
     start_vals = [0.0, 0.0]  # no ant has an opinion at t=0
-
-    # create 1000 smooth points for the chart
     time_points = np.linspace(0, max_time, 1000)
 
-    # run the solver
     results = odeint(
         ode_math_model,
         start_vals,

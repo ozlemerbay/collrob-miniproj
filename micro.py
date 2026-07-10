@@ -1,15 +1,15 @@
 import random
 import matplotlib.pyplot as plt
 from environment import GridWorld, FoodSite, ENV_WIDTH, ENV_HEIGHT
-from agent import SwarmAnt
+from swarm import SwarmAnt
 
-# resource A (Good)
+# resource A (good quality)
 A_POS_X, A_POS_Y = 25.0, 25.0
 A_ALPHA = 0.1  # detection rate
 A_RHO = 0.6  # adoption probability
 A_GAMMA = 0.01  # abandonment rate
 
-# resource B (Bad)
+# resource B (bad quality)
 B_POS_X, B_POS_Y = 75.0, 75.0
 B_ALPHA = 0.1
 B_RHO = 0.3
@@ -19,7 +19,7 @@ B_GAMMA = 0.05
 TEST_COUNTS = [20, 50, 100, 200]
 REPETITIONS = 10
 MAX_STEPS = 1500
-AGREE_LIMIT = 0.80  # 80% consensus
+AGREE_LIMIT = 0.80
 
 
 def do_swarm_sim(num_ants, total_steps):
@@ -88,18 +88,16 @@ def main_experiment_loop():
 
             run_data = do_swarm_sim(ant_count, MAX_STEPS)
 
-            # just save the first run of the 10 for the plot images
+            # save the first run of the 10 for the plot images
             if run_id == 0:
                 saved_graphs[ant_count] = run_data
 
             end_a = run_data["A"][-1]
             end_b = run_data["B"][-1]
-
-            # did they pick the right one?
             if end_a > end_b and end_a > 0.5:
                 wins += 1
 
-            # calculate how fast they reached the threshold
+            # find how fast they reached the threshold
             finished_at = -1
             for idx, a_ratio in enumerate(run_data["A"]):
                 if a_ratio >= AGREE_LIMIT:
@@ -109,9 +107,10 @@ def main_experiment_loop():
             if finished_at != -1:
                 steps_taken_list.append(finished_at)
 
-        # calculate the averages for the report table
+        # find the averages for the report table
         win_rate = (wins / REPETITIONS) * 100.0
 
+        # print to see the process
         if steps_taken_list:
             average_time = sum(steps_taken_list) / len(steps_taken_list)
             time_text = f"{average_time:.1f} steps"

@@ -18,7 +18,7 @@ class SwarmAnt:
         self.talk_range = TALK_RAD
 
     def do_random_walk(self):
-        # just pick a random angle and step forward
+        # pick a random angle and walk
         random_angle = random.uniform(0, 2 * math.pi)
         next_x = self.x + math.cos(random_angle) * self.speed
         next_y = self.y + math.sin(random_angle) * self.speed
@@ -27,7 +27,7 @@ class SwarmAnt:
         self.x, self.y = self.world.keep_in_bounds(next_x, next_y)
 
     def maybe_forget(self):
-        # check if ant drops current opinion based on gamma
+        # check if ant forgets opinion
         if self.current_idea is not None:
             if random.random() < self.current_idea.gamma:
                 self.current_idea = None  # go back to undecided
@@ -45,9 +45,9 @@ class SwarmAnt:
         # see who is around the ant
         nearby_ants = self.world.get_buddies(self, self.talk_range)
         if len(nearby_ants) == 0:
-            return  # nobody is here
+            return
 
-        # pick one random ant to listen to (simulates tandem run abstraction)
+        # pick one random ant
         speaker = random.choice(nearby_ants)
 
         # only copy them if we are undecided and they actually have an opinion
