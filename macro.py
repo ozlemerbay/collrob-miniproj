@@ -16,7 +16,7 @@ TOTAL_TIME = 50
 
 
 def ode_math_model(
-    fractions, time_t, a_disc, a_adopt, a_forget, b_disc, b_adopt, b_forget
+    fractions, _, a_disc, a_adopt, a_forget, b_disc, b_adopt, b_forget
 ):
     frac_a, frac_b = fractions
     frac_u = 1.0 - frac_a - frac_b  # the rest are undecided
